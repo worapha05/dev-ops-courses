@@ -1,0 +1,28 @@
+services:
+  writer:
+    image: alpine:3.20
+    command: >
+      sh -c "echo 'hello from volume' > /data/hello.txt &&
+        echo 'written' &&
+        sleep infinity"
+    volumes:
+      - shared-data:/data
+    networks:
+      - demo-net
+
+  reader:
+    image: alpine:3.20
+    command: sleep infinity
+    volumes:
+      - shared-data:/data
+    networks:
+      - demo-net
+    depends_on:
+      - writer
+
+volumes:
+  shared-data:
+
+networks:
+  demo-net:
+    driver: bridge

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShopLite</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #1e293b;
+        --text: #e2e8f0;
+        --accent: #38bdf8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: radial-gradient(circle at top, #1e3a5f, var(--bg));
+        color: var(--text);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        letter-spacing: 0.04em;
+      }
+      p {
+        opacity: 0.85;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        max-width: 480px;
+      }
+      li {
+        background: var(--card);
+        margin: 0.75rem 0;
+        padding: 1rem 1.25rem;
+        border-left: 3px solid var(--accent);
+      }
+      .price {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .err {
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ShopLite</h1>
+    <p>ตัวอย่าง Full-stack สำหรับ Containerization Bootcamp</p>
+    <ul id="products">
+      <li>กำลังโหลด...</li>
+    </ul>
+    <script>
+      async function load() {
+        const el = document.getElementById('products');
+        try {
+          const res = await fetch('/api/products');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const items = await res.json();
+          el.innerHTML = items
+            .map(
+              (p) =>
+                `<li><strong>${p.name}</strong><div class="price">${(p.price_cents / 100).toFixed(2)} THB</div></li>`,
+            )
+            .join('');
+        } catch (e) {
+          el.innerHTML = `<li class="err">โหลดสินค้าไม่สำเร็จ: ${e.message}</li>`;
+        }
+      }
+      load();
+    </script>
+  </body>
+</html>

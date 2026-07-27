@@ -1,0 +1,20 @@
+services:
+  api:
+    build: ./api
+    ports:
+      - '3001:3000'
+    environment:
+      REDIS_URL: redis://cache:6379
+    depends_on:
+      - cache
+    networks:
+      - compose-net
+
+  cache:
+    image: redis:7-alpine
+    networks:
+      - compose-net
+
+networks:
+  compose-net:
+    driver: bridge

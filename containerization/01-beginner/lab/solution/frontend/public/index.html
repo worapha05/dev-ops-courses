@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CafeStack</title>
+    <style>
+      body {
+        font-family: Georgia, serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #fff8f0;
+        color: #3b2f2f;
+      }
+      h1 {
+        color: #6f4e37;
+      }
+      li {
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+        background: #fff;
+        border-left: 4px solid #c4a484;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CafeStack Menu</h1>
+    <ul id="menu">
+      <li>กำลังโหลด...</li>
+    </ul>
+    <script>
+      fetch('/api/products')
+        .then((r) => r.json())
+        .then((items) => {
+          document.getElementById('menu').innerHTML = items
+            .map(
+              (p) =>
+                `<li><strong>${p.name}</strong> — ${(p.price_cents / 100).toFixed(2)} THB</li>`,
+            )
+            .join('');
+        })
+        .catch((e) => {
+          document.getElementById('menu').innerHTML = `<li>Error: ${e.message}</li>`;
+        });
+    </script>
+  </body>
+</html>

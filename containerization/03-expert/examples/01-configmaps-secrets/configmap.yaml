@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  LOG_LEVEL: info
+  APP_MODE: demo
+  UPSTREAM_URL: http://billing:8080

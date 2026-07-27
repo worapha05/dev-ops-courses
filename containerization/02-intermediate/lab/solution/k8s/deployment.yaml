@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parcelgo-api
+  labels:
+    app: parcelgo-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: parcelgo-api
+  template:
+    metadata:
+      labels:
+        app: parcelgo-api
+        tier: backend
+    spec:
+      containers:
+        - name: api
+          image: parcelgo-api:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: NODE_ENV
+              value: production
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

@@ -1,0 +1,53 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - '8081:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cafestack-net
+
+  backend:
+    build: ./backend
+    ports:
+      - '3001:3000'
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: ${DATABASE_URL:-postgres://cafe:cafe_dev@db:5432/cafestack}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - cafestack-net
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cafe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cafe_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-cafestack}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cafe -d cafestack']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - cafestack-net
+
+volumes:
+  pgdata:
+
+networks:
+  cafestack-net:
+    driver: bridge

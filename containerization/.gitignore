@@ -1,0 +1,35 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Docker / build artifacts
+*.tar
+*.img
+
+# Kubernetes local state
+.minikube/
+.kind/
+kubeconfig*
+
+# Lab scratch
+**/lab/scratch/
+**/tmp/
+*.swo
+.history/
+package-lock.json
