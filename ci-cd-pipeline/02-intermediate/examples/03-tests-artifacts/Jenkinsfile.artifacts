@@ -1,0 +1,33 @@
+pipeline {
+  agent {
+    docker {
+      image 'node:20-bookworm'
+      args '-u root:root'
+    }
+  }
+
+  stages {
+    stage('Install & Test') {
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm install'
+          sh 'npm run lint'
+          sh 'npm test'
+        }
+      }
+    }
+
+    stage('Package') {
+      steps {
+        sh '''
+          set -euo pipefail
+          apt-get update -qq && apt-get install -y -qq zip >/dev/null
+          mkdir -p dist
+          cp -r 01-beginner/sample-app/src 01-beginner/sample-app/package.json dist/
+          zip -r "sample-app-${BUILD_NUMBER}.zip" dist
+        '''
+        archiveArtifacts artifacts: 'sample-app-*.zip', fingerprint: true
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+pipeline {
+  agent {
+    docker {
+      image 'docker:27-cli'
+      args '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
+
+  environment {
+    REGISTRY = 'ghcr.io'
+    IMAGE = "ghcr.io/YOUR_ORG/sample-app"
+  }
+
+  stages {
+    stage('Test in Node container') {
+      agent {
+        docker {
+          image 'node:20-bookworm'
+          reuseNode true
+        }
+      }
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm install && npm run lint && npm test'
+        }
+      }
+    }
+
+    stage('Build & Push') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'ghcr-creds',
+          usernameVariable: 'REG_USER',
+          passwordVariable: 'REG_TOKEN'
+        )]) {
+          sh '''
+            set -euo pipefail
+            echo "$REG_TOKEN" | docker login "$REGISTRY" -u "$REG_USER" --password-stdin
+            docker build -t "$IMAGE:sha-${GIT_COMMIT}" ./01-beginner/sample-app
+            docker push "$IMAGE:sha-${GIT_COMMIT}"
+          '''
+        }
+      }
+    }
+
+    stage('Deploy (hook)') {
+      when {
+        branch 'main'
+      }
+      steps {
+        echo "เรียก Cloud Run / ECS / SSH deploy ที่นี่ โดยใช้ image digest/tag เดิม"
+      }
+    }
+  }
+}

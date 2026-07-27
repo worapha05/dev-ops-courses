@@ -1,0 +1,61 @@
+name: Secure delivery pipeline (reference)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: secure-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: sample-app:sha-${{ github.sha }}
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: 01-beginner/sample-app/package-lock.json
+      - working-directory: 01-beginner/sample-app
+        run: |
+          npm install
+          npm run lint
+          npm test
+
+  sast-fs:
+    needs: [quality]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: 01-beginner/sample-app
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  build-and-scan-image:
+    needs: [sast-fs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./01-beginner/sample-app
+          push: false
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"

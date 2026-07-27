@@ -1,0 +1,119 @@
+name: AetherBank Delivery
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: aetherbank-delivery-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_LOCAL: aetherbank/sample-app:sha-${{ github.sha }}
+
+jobs:
+  quality:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: 01-beginner/sample-app/package-lock.json
+      - name: Install, lint, test
+        working-directory: 01-beginner/sample-app
+        run: |
+          npm install
+          npm run lint
+          npm test
+
+  sast:
+    name: Trivy FS (SAST)
+    needs: [quality]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: 01-beginner/sample-app
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+  build:
+    name: Build image & Trivy image scan
+    needs: [sast]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (local load for lab)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./01-beginner/sample-app
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_LOCAL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_LOCAL }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Simulate registry push
+        run: |
+          echo "docker push ghcr.io/${{ github.repository_owner }}/sample-app:sha-${GITHUB_SHA}"
+          echo "ใช้ secrets.GITHUB_TOKEN / registry creds ในระบบจริง"
+
+  deploy-staging:
+    name: Deploy staging
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy same digest to staging
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          echo "Deploy ${IMAGE_LOCAL} → staging"
+          echo "project=${GCP_PROJECT_ID:-unset}"
+          echo "curl -fsS https://staging.example.invalid/health || true"
+          echo "staging smoke OK (simulated)"
+
+  deploy-production:
+    name: Blue-Green production cutover
+    needs: [deploy-staging]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.example.invalid
+    concurrency:
+      group: aetherbank-production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy GREEN with approved artifact
+        run: |
+          echo "GREEN ← ${IMAGE_LOCAL}"
+          echo "Smoke GREEN /health (simulated)"
+
+      - name: Switch traffic Blue → Green
+        run: |
+          echo "LB: BLUE=0% GREEN=100%"
+          echo "Production now serving sha-${GITHUB_SHA}"
+
+      - name: Rollback instructions
+        if: failure()
+        run: |
+          echo "LB: BLUE=100% GREEN=0% - rollback to previous blue revision"

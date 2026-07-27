@@ -1,0 +1,52 @@
+name: Blue-Green Deploy (simulated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag ที่ผ่าน staging แล้ว (เช่น sha-abc1234)"
+        required: true
+
+concurrency:
+  group: production-blue-green
+  cancel-in-progress: false
+
+jobs:
+  deploy-green:
+    name: Deploy Green (idle)
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy new revision to GREEN
+        run: |
+          echo "Deploy ${{ inputs.image_tag }} → environment=GREEN"
+          echo "GREEN_URL=https://green.example.invalid" >> "$GITHUB_ENV"
+
+      - name: Smoke test GREEN
+        run: |
+          echo "curl -fsS $GREEN_URL/health || exit 1"
+          echo "smoke OK (simulated)"
+
+  switch-traffic:
+    name: Switch LB Blue → Green
+    needs: [deploy-green]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.example.invalid
+    steps:
+      - name: Cutover
+        run: |
+          echo "LB weight: BLUE=0% GREEN=100%"
+          echo "Active color is now GREEN (${{ inputs.image_tag }})"
+
+  rollback:
+    name: Rollback to Blue
+    needs: [switch-traffic]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Revert traffic
+        run: |
+          echo "LB weight: BLUE=100% GREEN=0% (rollback)"

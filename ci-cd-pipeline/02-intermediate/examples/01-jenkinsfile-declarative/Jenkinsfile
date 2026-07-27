@@ -1,0 +1,79 @@
+pipeline {
+  agent {
+    docker {
+      image 'node:20-bookworm'
+      args '-u root:root'
+    }
+  }
+
+  options {
+    timestamps()
+    timeout(time: 15, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_ENV = 'ci'
+    APP_DIR = '01-beginner/sample-app'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Install') {
+      steps {
+        dir("${APP_DIR}") {
+          sh 'node -v && npm -v'
+          sh 'npm install'
+        }
+      }
+    }
+
+    stage('Lint') {
+      steps {
+        dir("${APP_DIR}") {
+          sh 'npm run lint'
+        }
+      }
+    }
+
+    stage('Test') {
+      steps {
+        dir("${APP_DIR}") {
+          sh 'npm test'
+        }
+      }
+    }
+
+    stage('Archive') {
+      steps {
+        sh '''
+          set -euo pipefail
+          mkdir -p dist
+          cp -r 01-beginner/sample-app/src 01-beginner/sample-app/package.json dist/
+          zip -r "sample-app-${BUILD_NUMBER}.zip" dist
+        '''
+        archiveArtifacts artifacts: 'sample-app-*.zip', fingerprint: true
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "Build finished with status: ${currentBuild.currentResult}"
+    }
+    success {
+      echo 'Declarative pipeline succeeded'
+    }
+    failure {
+      echo 'Declarative pipeline failed — open Console Output'
+    }
+    cleanup {
+      cleanWs(deleteDirs: true, notFailBuild: true)
+    }
+  }
+}

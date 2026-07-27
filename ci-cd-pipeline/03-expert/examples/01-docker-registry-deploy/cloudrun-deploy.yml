@@ -1,0 +1,51 @@
+name: Deploy Google Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "01-beginner/sample-app/**"
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-southeast1
+  SERVICE: sample-app
+  IMAGE: ${{ secrets.GCP_REGION_HOST }}/${{ secrets.GCP_PROJECT_ID }}/bootcamp/sample-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build & push to Artifact Registry
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -t "${IMAGE}:sha-${GITHUB_SHA}" ./01-beginner/sample-app
+          docker push "${IMAGE}:sha-${GITHUB_SHA}"
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}:sha-${{ github.sha }}
+
+      - name: Smoke health check
+        run: |
+          URL="$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')"
+          curl -fsS "$URL/health"
+          echo "Cloud Run OK: $URL"

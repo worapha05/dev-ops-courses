@@ -1,0 +1,37 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'IMAGE_TAG', defaultValue: 'sha-local', description: 'Image tag ที่ผ่าน staging')
+  }
+
+  stages {
+    stage('Deploy staging') {
+      steps {
+        echo "Deploy ${params.IMAGE_TAG} to staging"
+        sh 'echo simulated smoke on staging'
+      }
+    }
+
+    stage('Approve production') {
+      options {
+        timeout(time: 1, unit: 'HOURS')
+      }
+      steps {
+        input message: "Promote ${params.IMAGE_TAG} to production?", ok: 'Deploy'
+      }
+    }
+
+    stage('Deploy production') {
+      steps {
+        echo "Blue-Green/Canary cutover for ${params.IMAGE_TAG}"
+      }
+    }
+  }
+
+  post {
+    aborted {
+      echo 'Production deploy was aborted or timed out'
+    }
+  }
+}

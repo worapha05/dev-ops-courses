@@ -1,0 +1,84 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    timeout(time: 45, unit: 'MINUTES')
+  }
+
+  environment {
+    IMAGE = "aetherbank/sample-app:sha-${env.GIT_COMMIT}"
+  }
+
+  stages {
+    stage('Quality') {
+      agent {
+        docker {
+          image 'node:20-bookworm'
+          reuseNode true
+        }
+      }
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm install && npm run lint && npm test'
+        }
+      }
+    }
+
+    stage('SAST hint') {
+      steps {
+        echo 'ในระบบจริง: รัน trivy fs 01-beginner/sample-app --severity HIGH,CRITICAL --exit-code 1'
+      }
+    }
+
+    stage('Build image') {
+      steps {
+        echo "docker build -t ${IMAGE} ./01-beginner/sample-app"
+        echo "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE}"
+        echo "docker push ${IMAGE}"
+      }
+    }
+
+    stage('Deploy staging') {
+      when {
+        branch 'main'
+      }
+      steps {
+        echo "Deploy ${IMAGE} to staging + smoke /health"
+      }
+    }
+
+    stage('Approve production') {
+      when {
+        branch 'main'
+      }
+      options {
+        timeout(time: 2, unit: 'HOURS')
+      }
+      steps {
+        input message: "Blue-Green cutover for ${IMAGE}?", ok: 'Switch traffic'
+      }
+    }
+
+    stage('Production cutover') {
+      when {
+        branch 'main'
+      }
+      steps {
+        echo "LB weight GREEN=100% using ${IMAGE}"
+      }
+    }
+  }
+
+  post {
+    aborted {
+      echo 'Production approval aborted/timed out — no cutover'
+    }
+    failure {
+      echo 'Pipeline failed — do not switch traffic; keep BLUE'
+    }
+    success {
+      echo 'AetherBank delivery pipeline finished'
+    }
+  }
+}

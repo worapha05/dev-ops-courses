@@ -1,0 +1,64 @@
+name: CI — Env & Triggers
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "01-beginner/sample-app/**"
+      - ".github/workflows/env-and-triggers.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "ทำไมถึงรันมือ"
+        required: false
+        default: "manual-smoke"
+
+env:
+  APP_NAME: sample-app
+  DEFAULT_NODE: "20"
+
+jobs:
+  show-context:
+    name: Print context & env
+    runs-on: ubuntu-latest
+    env:
+      JOB_STAGE: context
+    steps:
+      - name: Dump useful contexts
+        env:
+          STEP_HINT: beginner-env-lab
+          MANUAL_REASON: ${{ inputs.reason || 'n/a' }}
+        run: |
+          echo "APP_NAME=$APP_NAME"
+          echo "JOB_STAGE=$JOB_STAGE"
+          echo "STEP_HINT=$STEP_HINT"
+          echo "MANUAL_REASON=$MANUAL_REASON"
+          echo "github.repository=${{ github.repository }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.event_name=${{ github.event_name }}"
+          echo "github.sha=${{ github.sha }}"
+          echo "runner.os=${{ runner.os }}"
+
+  test:
+    name: Test sample-app
+    runs-on: ubuntu-latest
+    needs: [show-context]
+    env:
+      APP_ENV: ci
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.DEFAULT_NODE }}
+
+      - name: Install & test
+        working-directory: 01-beginner/sample-app
+        env:
+          APP_ENV: ${{ env.APP_ENV }}
+        run: |
+          npm install
+          npm test

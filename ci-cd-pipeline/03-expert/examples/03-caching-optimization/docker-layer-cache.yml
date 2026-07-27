@@ -1,0 +1,23 @@
+name: Docker layer cache (GHA backend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "01-beginner/sample-app/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./01-beginner/sample-app
+          push: false
+          load: true
+          tags: sample-app:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

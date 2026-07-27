@@ -1,0 +1,86 @@
+pipeline {
+  agent {
+    docker {
+      image 'node:20-bookworm'
+      args '-u root:root'
+    }
+  }
+
+  options {
+    timestamps()
+    timeout(time: 20, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_ENV = 'ci'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Install') {
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm install'
+        }
+      }
+    }
+
+    stage('Lint') {
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm run lint'
+        }
+      }
+    }
+
+    stage('Test') {
+      steps {
+        dir('01-beginner/sample-app') {
+          sh 'npm test'
+        }
+      }
+    }
+
+    stage('Credentials check') {
+      steps {
+        withCredentials([string(credentialsId: 'shopflow-demo-token', variable: 'SHOPFLOW_TOKEN')]) {
+          sh '''
+            set -euo pipefail
+            echo "shopflow_token_length=${#SHOPFLOW_TOKEN}"
+          '''
+        }
+      }
+    }
+
+    stage('Archive') {
+      steps {
+        sh '''
+          set -euo pipefail
+          apt-get update -qq && apt-get install -y -qq zip >/dev/null
+          mkdir -p dist
+          cp -r 01-beginner/sample-app/src 01-beginner/sample-app/package.json dist/
+          zip -r "shopflow-${BUILD_NUMBER}.zip" dist
+        '''
+        archiveArtifacts artifacts: 'shopflow-*.zip', fingerprint: true
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "ShopFlow build: ${currentBuild.currentResult}"
+    }
+    success {
+      echo 'ShopFlow pipeline OK'
+    }
+    failure {
+      echo 'ShopFlow pipeline FAILED'
+    }
+  }
+}

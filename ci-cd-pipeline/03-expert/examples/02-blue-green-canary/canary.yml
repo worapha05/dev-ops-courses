@@ -1,0 +1,48 @@
+name: Canary Release (simulated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to canary"
+        required: true
+      canary_percent:
+        description: "Initial canary traffic percent"
+        required: true
+        default: "5"
+
+jobs:
+  canary:
+    name: Roll out canary ${{ inputs.canary_percent }}%
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Shift traffic
+        run: |
+          CANARY_PCT="${{ inputs.canary_percent }}"
+          STABLE_PCT=$((100 - CANARY_PCT))
+          echo "Stable=${STABLE_PCT}% Canary=${CANARY_PCT}%"
+          echo "image=${{ inputs.image_tag }}"
+
+      - name: Evaluate SLOs
+        run: |
+          echo "Check error_rate < 1% and p95 latency budget"
+          echo "metrics_ok=true" >> "$GITHUB_ENV"
+
+  promote:
+    name: Promote to 100%
+    needs: [canary]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Full promote
+        run: echo "Canary → Stable 100% (${{ inputs.image_tag }})"
+
+  abort:
+    name: Abort canary
+    needs: [canary]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Route 100% back to previous stable revision"
