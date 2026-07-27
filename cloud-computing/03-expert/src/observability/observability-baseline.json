@@ -1,0 +1,37 @@
+{
+  "Comment": "Example CloudWatch Agent / log group naming for ECS or EC2",
+  "logs": {
+    "log_groups": [
+      {
+        "name": "/ccp/xprt/api",
+        "retention_days": 30
+      },
+      {
+        "name": "/ccp/xprt/audit",
+        "retention_days": 365
+      }
+    ]
+  },
+  "metrics": {
+    "namespace": "CCP/Xprt",
+    "alarms": [
+      {
+        "name": "HighErrorRate",
+        "metric": "5xxCount",
+        "threshold": 5,
+        "period_seconds": 60
+      },
+      {
+        "name": "HighP95Latency",
+        "metric": "TargetResponseTime",
+        "threshold": 0.3,
+        "period_seconds": 60
+      }
+    ]
+  },
+  "tracing": {
+    "aws": "X-Ray",
+    "gcp": "Cloud Trace",
+    "propagation": "W3C traceparent"
+  }
+}

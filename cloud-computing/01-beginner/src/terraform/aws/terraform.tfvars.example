@@ -1,0 +1,6 @@
+aws_region    = "ap-southeast-1"
+aws_profile   = "bootcamp"
+project_name  = "ccp-bootcamp"
+environment   = "dev"
+bucket_suffix = "change-me-to-unique"
+instance_type = "t3.micro"

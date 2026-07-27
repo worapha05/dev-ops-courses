@@ -1,0 +1,6 @@
+project_id      = "your-gcp-project-id"
+region          = "asia-southeast1"
+project_name    = "ccp-mid"
+environment     = "staging"
+vpc_cidr        = "10.30.0.0/16"
+container_image = "us-docker.pkg.dev/cloudrun/container/hello"

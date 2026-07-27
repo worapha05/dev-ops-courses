@@ -1,0 +1,7 @@
+aws_region         = "ap-southeast-1"
+aws_profile        = "bootcamp"
+project_name       = "ccp-mid"
+environment        = "staging"
+vpc_cidr           = "10.20.0.0/16"
+container_image    = "public.ecr.aws/docker/library/nginx:alpine"
+enable_nat_gateway = true
