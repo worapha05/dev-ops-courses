@@ -1,3 +1,7 @@
+📍 **Nav:** [`🏠 Dev Learning Courses Hub`](https://github.com/worapha05/dev-learning-courses-hub/blob/main/README.md) | [`📂 DevOps Courses Index`](../README.md) | 📝 [`Prompt File`](https://github.com/worapha05/ai-learning-prompts-hub/blob/main/course-generation/dev-ops-courses/ci-cd-pipeline-prompt.md)
+
+---
+
 # CI/CD Pipeline Bootcamp — Zero to Expert
 
 bootcamp เรียนรู้ **CI/CD Pipelines** แบบครบวงจร เน้น **GitHub Actions และ Jenkins**
